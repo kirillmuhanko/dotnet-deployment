@@ -1,17 +1,8 @@
 version: '3.8'
 
-
-# Default ${TEAMCITY_VERSION} is defined in .env file
-
-# ./buildserver_pgdata - Posgres DB data
-# ./data_dir - TeamCity data directory
-# ./teamcity-server-logs - logs of primary TeamCity server
-# ./agents/agent-1/conf - configuration directory for the first build agent
-# ./agents/agent-1/conf - configuration directory for the second build agent
-
 services:
-  db:
-    image: postgres:latest
+  postgres-db:
+    image: postgres:${POSTGRES_VERSION}
     restart: always
     environment:
       - POSTGRES_PASSWORD=teamcity_password
@@ -23,6 +14,20 @@ services:
     ports:
       - 5433:5432
 
+  mssql-db:
+    image: ${SQL_IMAGE}
+    environment:
+      SA_PASSWORD: ${SA_PASSWORD}
+      ACCEPT_EULA: ${ACCEPT_EULA}
+    ports:
+      - 1401:1433
+    healthcheck:
+      test: [ "CMD", "/opt/mssql-tools/bin/sqlcmd", "-U", "sa", "-P", "${SA_PASSWORD}", "-Q", "select 1"]
+      interval: 10s
+      retries: 10
+    volumes:
+      - sqlvolume:/var/opt/mssql
+
   teamcity:
     image: jetbrains/teamcity-server:${TEAMCITY_VERSION}
     ports:
@@ -31,7 +36,7 @@ services:
       - ./data_dir:/data/teamcity_server/datadir
       - ./teamcity-server-logs:/opt/teamcity/logs
     depends_on:
-      - db
+      - postgres-db
 
   teamcity-agent-1:
     image: jetbrains/teamcity-agent:${TEAMCITY_VERSION}-linux-sudo
@@ -47,3 +52,54 @@ services:
       - ./agents/agent-2/conf:/data/teamcity_agent/conf
     environment:
       - DOCKER_IN_DOCKER=start
+
+  octopus-server:
+    image: octopusdeploy/octopusdeploy:${OCTOPUS_SERVER_TAG}
+    privileged: ${PRIVILEGED}
+    user: ${USER}
+    environment:
+      ACCEPT_EULA: ${ACCEPT_OCTOPUS_EULA}
+      OCTOPUS_SERVER_NODE_NAME: ${OCTOPUS_SERVER_NODE_NAME}
+      DB_CONNECTION_STRING: ${DB_CONNECTION_STRING}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      OCTOPUS_SERVER_BASE64_LICENSE: ${OCTOPUS_SERVER_BASE64_LICENSE}
+      MASTER_KEY: ${MASTER_KEY}
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+      DISABLE_DIND: ${DISABLE_DIND}
+    ports:
+      - 8080:8080
+      - 11111:10943
+    depends_on:
+      - mssql-db
+    volumes:
+      - repository:/repository
+      - artifacts:/artifacts
+      - taskLogs:/taskLogs
+      - cache:/cache
+      - import:/import
+
+  octopus-tentacle:
+    image: octopusdeploy/tentacle:${TENTACLE_VERSION}
+    environment:
+      ListeningPort: 10931
+      ServerApiKey: API-WZ27UDXXAPCKUPZSH1WTG8YC80G
+      TargetEnvironment: Test
+      TargetRole: app-server
+      ServerUrl: http://octopus-server:8080
+      PublicHostNameConfiguration: ComputerName
+      ACCEPT_EULA: Y
+    ports:
+      - "10933:10931"
+    volumes:
+      - app-deployments:/app/deployments
+
+volumes:
+  repository:
+  artifacts:
+  taskLogs:
+  cache:
+  import:
+  sqlvolume:
+  app-deployments:
