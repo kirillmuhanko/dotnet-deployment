@@ -408,5 +408,22 @@ FodyWeavers.xsd
 .idea/
 
 # Ignore built/deployment artifacts in the dist folder
-dist/
+dist/**
 !dist/.keep
+
+# Ignore everything inside the docker directory
+docker/**
+
+# Except for the following:
+!docker/*
+!docker/*/.env
+!docker/*/docker-compose.yml
+!docker/*/agents/
+!docker/*/agents/*/
+!docker/*/agents/*/conf/
+!docker/*/agents/*/conf/buildAgent.properties
+!docker/*/data_dir/
+!docker/*/data_dir/config/
+!docker/*/data_dir/config/database.properties
+!docker/*/teamcity-server-logs/
+!docker/*/teamcity-server-logs/.keep
