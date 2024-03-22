@@ -404,4 +404,9 @@ FodyWeavers.xsd
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio
 
+# Ignore Rider project configuration files
 .idea/
+
+# Ignore built/deployment artifacts in the dist folder
+dist/
+!dist/.keep
