@@ -425,5 +425,7 @@ docker/**
 !docker/*/data_dir/
 !docker/*/data_dir/config/
 !docker/*/data_dir/config/database.properties
+!docker/*/dockerfiles/
+!docker/*/dockerfiles/*
 !docker/*/teamcity-server-logs/
 !docker/*/teamcity-server-logs/.keep
